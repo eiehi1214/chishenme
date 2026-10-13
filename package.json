@@ -1,0 +1,14 @@
+{
+  "name": "chishenme-server",
+  "version": "1.0.0",
+  "description": "What to Eat - Campus AI Food Recommendation Backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "init-db": "node init_db.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.22.2"
+  }
+}

@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Database runtime files (keep the .db file, ignore journal files)
+data/*.db-shm
+data/*.db-wal
+data/*.db-journal
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Environment
+.env
+.env.local

@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>吃什么 - 校园AI智能就餐推荐助手 | 可交互原型</title>
+<style>
+/* ==================== Reset & Base ==================== */
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --primary:#FF6B35; --primary-light:#FFF0E8; --primary-dark:#E55A2B;
+  --ai-blue:#3B82F6; --ai-blue-light:#EFF6FF; --ai-blue-dark:#1D4ED8;
+  --green:#10B981; --green-light:#D1FAE5;
+  --amber:#F59E0B; --amber-light:#FEF3C7;
+  --red:#EF4444; --red-light:#FEE2E2;
+  --gray-50:#F9FAFB; --gray-100:#F3F4F6; --gray-200:#E5E7EB;
+  --gray-300:#D1D5DB; --gray-400:#9CA3AF; --gray-500:#6B7280;
+  --gray-600:#4B5563; --gray-700:#374151; --gray-800:#1F2937; --gray-900:#111827;
+  --radius:12px; --radius-sm:8px; --radius-lg:20px;
+  --shadow:0 2px 12px rgba(0,0,0,0.08); --shadow-lg:0 8px 30px rgba(0,0,0,0.12);
+}
+body {
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+  background:#f0f2f5; color:var(--gray-800); display:flex; justify-content:center;
+  min-height:100vh; padding:20px 0;
+}
+/* ==================== Phone Frame ==================== */
+.phone-frame {
+  width:390px; height:844px; background:#fff; border-radius:44px;
+  box-shadow:0 0 0 12px #1a1a1a, 0 0 0 14px #333, var(--shadow-lg);
+  overflow:hidden; position:relative; display:flex; flex-direction:column;
+}
+.phone-notch {
+  position:absolute; top:0; left:50%; transform:translateX(-50%);
+  width:150px; height:30px; background:#1a1a1a; border-radius:0 0 20px 20px; z-index:100;
+}
+/* ==================== Status Bar ==================== */
+.status-bar {
+  height:44px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 24px 0 28px; font-size:14px; font-weight:600; color:var(--gray-900);
+  background:#fff; flex-shrink:0; position:relative; z-index:50;
+}
+.status-bar .right-icons { display:flex; gap:5px; align-items:center; font-size:12px; }
+/* ==================== App Header ==================== */
+.app-header {
+  padding:8px 16px 12px; background:#fff; border-bottom:1px solid var(--gray-100);
+  flex-shrink:0; z-index:40;
+}
+.app-header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.app-logo { display:flex; align-items:center; gap:8px; }
+.app-logo-icon {
+  width:32px; height:32px; border-radius:10px; background:linear-gradient(135deg,var(--primary),#FF8C5A);
+  display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff; box-shadow:0 2px 8px rgba(255,107,53,0.3);
+}
+.app-logo-text { font-size:18px; font-weight:800; color:var(--gray-900); }
+.app-logo-sub { font-size:10px; color:var(--gray-400); font-weight:500; }
+.ai-badge {
+  display:inline-flex; align-items:center; gap:4px; background:var(--ai-blue-light);
+  color:var(--ai-blue); font-size:10px; font-weight:600; padding:3px 8px; border-radius:20px;
+  border:1px solid #BFDBFE;
+}
+.ai-badge .dot { width:6px; height:6px; border-radius:50%; background:var(--ai-blue); animation:blink 1.5s infinite; }
+@keyframes blink { 0%,100%{opacity:0.3} 50%{opacity:1} }
+/* Search Bar */
+.search-bar {
+  display:flex; align-items:center; gap:8px; background:var(--gray-100);
+  border-radius:24px; padding:10px 16px; transition:all 0.3s;
+  border:2px solid transparent;
+}
+.search-bar.focused { background:#fff; border-color:var(--primary); box-shadow:0 0 0 4px var(--primary-light); }
+.search-bar input {
+  flex:1; border:none; background:transparent; font-size:14px; outline:none;
+  color:var(--gray-800); font-weight:500;
+}
+.search-bar input::placeholder { color:var(--gray-400); }
+.search-bar .search-icon { color:var(--gray-400); font-size:16px; }
+.search-bar .ai-search-icon {
+  color:var(--ai-blue); font-size:16px; cursor:pointer; transition:transform 0.2s;
+}
+.search-bar .ai-search-icon:hover { transform:scale(1.2); }
+/* ==================== Content Area ==================== */
+.content-area {
+  flex:1; overflow-y:auto; overflow-x:hidden; background:var(--gray-50);
+  scrollbar-width:none; -ms-overflow-style:none;
+}
+.content-area::-webkit-scrollbar { display:none; }
+/* ==================== Page Sections ==================== */
+.page { display:none; padding:16px; }
+.page.active { display:block; animation:fadeIn 0.3s; }
+.page-ai.active {
+  display:flex; flex-direction:column; padding:0;
+  height:100%; overflow:hidden;
+}
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* ==================== Home Page ==================== */
+.situation-card {
+  background:linear-gradient(135deg,#FF6B35 0%,#FF8C5A 100%); border-radius:var(--radius-lg);
+  padding:16px 18px; color:#fff; margin-bottom:16px; position:relative; overflow:hidden;
+  box-shadow:0 4px 16px rgba(255,107,53,0.25);
+}
+.situation-card::before {
+  content:''; position:absolute; top:-20px; right:-20px; width:80px; height:80px;
+  border-radius:50%; background:rgba(255,255,255,0.1);
+}
+.situation-card::after {
+  content:''; position:absolute; bottom:-30px; right:20px; width:60px; height:60px;
+  border-radius:50%; background:rgba(255,255,255,0.08);
+}
+.situation-card .greeting { font-size:13px; opacity:0.9; margin-bottom:4px; }
+.situation-card .situation-text { font-size:18px; font-weight:700; margin-bottom:8px; position:relative; z-index:1; }
+.situation-card .factors { display:flex; gap:8px; flex-wrap:wrap; position:relative; z-index:1; }
+.situation-card .factor {
+  background:rgba(255,255,255,0.2); padding:3px 10px; border-radius:20px;
+  font-size:11px; font-weight:500; backdrop-filter:blur(4px);
+}
+
+/* Recommendation Section */
+.rec-section-title {
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
+}
+.rec-section-title .left { display:flex; align-items:center; gap:6px; }
+.rec-section-title .left .icon { font-size:18px; }
+.rec-section-title .left .text { font-size:16px; font-weight:700; color:var(--gray-800); }
+.rec-section-title .refresh-btn {
+  display:flex; align-items:center; gap:4px; background:var(--primary-light);
+  color:var(--primary); font-size:12px; font-weight:600; padding:6px 12px;
+  border-radius:20px; border:none; cursor:pointer; transition:all 0.2s;
+}
+.rec-section-title .refresh-btn:hover { background:var(--primary); color:#fff; }
+.rec-section-title .refresh-btn:active { transform:scale(0.95); }
+.rec-section-title .refresh-btn .spin { display:inline-block; transition:transform 0.5s; }
+.rec-section-title .refresh-btn.spinning .spin { transform:rotate(360deg); }
+
+/* Recommendation Cards */
+.rec-list { display:flex; flex-direction:column; gap:12px; }
+.rec-card {
+  background:#fff; border-radius:var(--radius); padding:14px;
+  box-shadow:var(--shadow); position:relative; transition:all 0.3s;
+  border:1px solid var(--gray-100);
+}
+.rec-card.dismissed { opacity:0.4; transform:scale(0.95); pointer-events:none; }
+.rec-card.adopted { border-color:var(--green); background:var(--green-light); }
+.rec-card-header { display:flex; gap:12px; margin-bottom:10px; }
+.rec-card-img {
+  width:64px; height:64px; border-radius:12px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:32px;
+  background:var(--gray-100);
+}
+.rec-card-info { flex:1; min-width:0; }
+.rec-card-name { font-size:15px; font-weight:700; color:var(--gray-900); margin-bottom:4px; }
+.rec-card-meta { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
+.rec-card-tag {
+  font-size:10px; font-weight:600; padding:2px 7px; border-radius:6px;
+}
+.rec-card-tag.price { background:var(--amber-light); color:#92400E; }
+.rec-card-tag.canteen { background:var(--ai-blue-light); color:var(--ai-blue-dark); }
+.rec-card-tag.spicy { background:var(--red-light); color:var(--red); }
+.rec-card-tag.distance { background:var(--green-light); color:#065F46; }
+.rec-card-reason {
+  font-size:12px; color:var(--gray-500); line-height:1.5;
+  display:flex; align-items:flex-start; gap:4px;
+}
+.rec-card-reason .ai-icon { color:var(--ai-blue); flex-shrink:0; margin-top:1px; }
+.rec-card-actions { display:flex; gap:8px; }
+.rec-card-actions button {
+  flex:1; padding:8px 0; border-radius:10px; font-size:13px; font-weight:600;
+  border:none; cursor:pointer; transition:all 0.2s; display:flex; align-items:center;
+  justify-content:center; gap:4px;
+}
+.btn-adopt { background:var(--primary); color:#fff; }
+.btn-adopt:hover { background:var(--primary-dark); }
+.btn-adopt:active { transform:scale(0.97); }
+.btn-dismiss { background:var(--gray-100); color:var(--gray-500); }
+.btn-dismiss:hover { background:var(--gray-200); }
+.btn-dismiss:active { transform:scale(0.97); }
+
+/* AI Loading */
+.ai-loading {
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  padding:20px; color:var(--ai-blue); font-size:13px; font-weight:500;
+}
+.ai-loading .dots { display:flex; gap:3px; }
+.ai-loading .dots span {
+  width:6px; height:6px; border-radius:50%; background:var(--ai-blue);
+  animation:loadingDot 1.4s infinite ease-in-out;
+}
+.ai-loading .dots span:nth-child(2) { animation-delay:0.2s; }
+.ai-loading .dots span:nth-child(3) { animation-delay:0.4s; }
+@keyframes loadingDot { 0%,80%,100%{opacity:0.3;transform:scale(0.8)} 40%{opacity:1;transform:scale(1.2)} }
+
+/* ==================== AI Chat Page ==================== */
+.page-ai .ai-chat-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px; background:#fff; border-bottom:1px solid var(--gray-100);
+  flex-shrink:0;
+}
+.page-ai .ai-chat-header .title {
+  display:flex; align-items:center; gap:8px; font-size:15px; font-weight:700; color:var(--gray-800);
+}
+.page-ai .ai-chat-messages {
+  flex:1; overflow-y:auto; padding:14px 16px;
+  display:flex; flex-direction:column; gap:12px; background:var(--gray-50);
+}
+.page-ai .ai-chat-input-area {
+  border-top:1px solid var(--gray-100); padding:10px 14px 16px; flex-shrink:0;
+  background:#fff;
+}
+.nlu-chip {
+  background:var(--ai-blue-light); color:var(--ai-blue); font-size:12px; font-weight:500;
+  padding:8px 14px; border-radius:20px; border:1px solid #BFDBFE; cursor:pointer; transition:all 0.2s;
+}
+.nlu-chip:hover { background:var(--ai-blue); color:#fff; }
+.nlu-parsed {
+  background:var(--ai-blue-light); border-radius:10px; padding:10px 12px;
+  margin-bottom:12px; font-size:12px; color:var(--ai-blue-dark); line-height:1.6;
+}
+.nlu-parsed .label { font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:4px; }
+.nlu-parsed .constraints { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.nlu-parsed .constraint-tag {
+  background:#fff; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:600;
+  border:1px solid #BFDBFE; color:var(--ai-blue-dark);
+}
+
+/* ==================== AI Chat ==================== */
+.ai-chat-header .ai-avatar-small {
+  width:24px; height:24px; border-radius:50%; background:linear-gradient(135deg,var(--ai-blue),#7C3AED);
+  display:flex; align-items:center; justify-content:center; font-size:14px;
+}
+.ai-chat-message {
+  display:flex; gap:8px; max-width:92%; animation:fadeIn 0.3s;
+}
+.ai-chat-message.user { align-self:flex-end; flex-direction:row-reverse; }
+.ai-chat-message.ai { align-self:flex-start; }
+.ai-chat-message .avatar {
+  width:32px; height:32px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:16px;
+}
+.ai-chat-message.ai .avatar { background:var(--ai-blue-light); }
+.ai-chat-message.user .avatar { background:var(--primary-light); }
+.ai-chat-message .bubble {
+  padding:10px 12px; border-radius:14px; font-size:13px; line-height:1.5;
+  word-break:break-word; box-shadow:var(--shadow-sm);
+}
+.ai-chat-message.ai .bubble {
+  background:#fff; border:1px solid var(--gray-100); color:var(--gray-800);
+  border-top-left-radius:4px;
+}
+.ai-chat-message.user .bubble {
+  background:var(--primary); color:#fff;
+  border-top-right-radius:4px;
+}
+.ai-chat-message .bubble .ai-rec-cards {
+  display:flex; flex-direction:column; gap:8px; margin-top:10px;
+}
+.ai-chat-message .bubble .ai-rec-cards .rec-card {
+  box-shadow:none; border:1px solid var(--gray-100); margin:0;
+}
+.ai-chat-message .bubble .ai-rec-cards .rec-card:first-child { margin-top:4px; }
+.ai-typing {
+  display:flex; gap:4px; padding:12px 10px;
+}
+.ai-typing .dot {
+  width:6px; height:6px; border-radius:50%; background:var(--gray-400);
+  animation:typingBounce 1.2s infinite;
+}
+.ai-typing .dot:nth-child(2) { animation-delay:0.15s; }
+.ai-typing .dot:nth-child(3) { animation-delay:0.3s; }
+@keyframes typingBounce {
+  0%,80%,100%{transform:translateY(0);opacity:0.4}
+  40%{transform:translateY(-5px);opacity:1}
+}
+.ai-chat-suggestions {
+  display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;
+}
+.ai-chat-input-wrap {
+  display:flex; gap:8px; align-items:center;
+}
+.ai-chat-input-wrap input {
+  flex:1; padding:10px 14px; border:2px solid var(--gray-200); border-radius:20px;
+  font-size:14px; outline:none; background:var(--gray-50);
+}
+.ai-chat-input-wrap input:focus { border-color:var(--ai-blue); background:#fff; }
+.ai-chat-input-wrap button {
+  padding:10px 18px; border:none; border-radius:20px; background:var(--ai-blue);
+  color:#fff; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;
+}
+.ai-chat-input-wrap button:hover { background:#2563EB; }
+
+/* ==================== Discover Page ==================== */
+.category-bar {
+  display:flex; gap:8px; overflow-x:auto; padding:0 0 12px; scrollbar-width:none;
+}
+.category-bar::-webkit-scrollbar { display:none; }
+.category-item {
+  padding:8px 16px; border-radius:20px; font-size:13px; font-weight:600;
+  white-space:nowrap; cursor:pointer; transition:all 0.2s; border:1px solid var(--gray-200);
+  background:#fff; color:var(--gray-600);
+}
+.category-item.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+.food-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.food-card {
+  background:#fff; border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow);
+  cursor:pointer; transition:all 0.2s; border:1px solid var(--gray-100);
+}
+.food-card:active { transform:scale(0.97); }
+.food-card-img {
+  width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+  font-size:40px; background:var(--gray-100);
+}
+.food-card-body { padding:10px 12px; }
+.food-card-name { font-size:14px; font-weight:700; color:var(--gray-900); margin-bottom:4px; }
+.food-card-meta { font-size:11px; color:var(--gray-400); margin-bottom:6px; }
+.food-card-price { font-size:16px; font-weight:800; color:var(--primary); }
+.food-card-price .unit { font-size:11px; font-weight:500; }
+.hot-badge {
+  position:absolute; top:8px; right:8px; background:var(--red); color:#fff;
+  font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px;
+}
+
+/* ==================== Profile Page ==================== */
+.profile-header {
+  text-align:center; padding:24px 0 20px; background:linear-gradient(135deg,var(--primary),#FF8C5A);
+  border-radius:var(--radius-lg); color:#fff; margin-bottom:16px;
+}
+.profile-avatar {
+  width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,0.3);
+  display:flex; align-items:center; justify-content:center; font-size:28px;
+  margin:0 auto 10px; border:3px solid rgba(255,255,255,0.5);
+}
+.profile-name { font-size:18px; font-weight:700; margin-bottom:4px; }
+.profile-sub { font-size:12px; opacity:0.85; }
+.profile-stats { display:flex; justify-content:center; gap:24px; margin-top:14px; }
+.profile-stat { text-align:center; }
+.profile-stat .num { font-size:18px; font-weight:800; }
+.profile-stat .label { font-size:10px; opacity:0.8; }
+
+.profile-section {
+  background:#fff; border-radius:var(--radius); padding:16px; margin-bottom:12px; box-shadow:var(--shadow);
+}
+.profile-section-title { font-size:14px; font-weight:700; color:var(--gray-800); margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+.taste-tags { display:flex; flex-wrap:wrap; gap:8px; }
+.taste-tag {
+  padding:6px 12px; border-radius:20px; font-size:12px; font-weight:600;
+  background:var(--primary-light); color:var(--primary);
+}
+
+.history-list { display:flex; flex-direction:column; gap:10px; }
+.history-item {
+  display:flex; align-items:center; gap:10px; padding:10px; background:var(--gray-50);
+  border-radius:10px;
+}
+.history-item .emoji { font-size:24px; }
+.history-item .info { flex:1; }
+.history-item .name { font-size:13px; font-weight:600; color:var(--gray-700); }
+.history-item .time { font-size:11px; color:var(--gray-400); }
+.history-item .rating { font-size:14px; }
+
+/* ==================== Bottom Nav ==================== */
+.bottom-nav {
+  display:flex; background:#fff; border-top:1px solid var(--gray-100);
+  padding:8px 0 24px; flex-shrink:0; z-index:50;
+}
+.nav-item {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+  background:none; border:none; cursor:pointer; transition:all 0.2s;
+  color:var(--gray-400); font-size:10px; font-weight:600;
+}
+.nav-item.active { color:var(--primary); }
+.nav-item .icon { font-size:22px; line-height:1; }
+
+/* ==================== Bottom Sheet (Food Detail) ==================== */
+.bottom-sheet-overlay {
+  position:absolute; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,0.4); z-index:80; display:none;
+  animation:fadeIn 0.2s;
+}
+.bottom-sheet-overlay.show { display:block; }
+.bottom-sheet {
+  position:absolute; bottom:0; left:0; right:0; background:#fff;
+  border-radius:24px 24px 0 0; z-index:81; max-height:80%; overflow-y:auto;
+  display:none; animation:slideUpSheet 0.3s; padding-bottom:30px;
+}
+.bottom-sheet.show { display:block; }
+@keyframes slideUpSheet { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.bottom-sheet-handle {
+  width:40px; height:4px; background:var(--gray-300); border-radius:2px;
+  margin:12px auto 0;
+}
+.bs-image {
+  width:100%; height:180px; display:flex; align-items:center; justify-content:center;
+  font-size:72px; background:var(--gray-100); border-radius:0 0 24px 24px;
+}
+.bs-content { padding:20px; }
+.bs-name { font-size:22px; font-weight:800; color:var(--gray-900); margin-bottom:8px; }
+.bs-tags { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.bs-info-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--gray-100); }
+.bs-info-row .label { font-size:13px; color:var(--gray-400); }
+.bs-info-row .value { font-size:13px; font-weight:600; color:var(--gray-700); }
+.bs-ai-reason {
+  background:var(--ai-blue-light); border-radius:12px; padding:14px; margin-top:16px;
+  display:flex; gap:10px;
+}
+.bs-ai-reason .icon { font-size:20px; flex-shrink:0; }
+.bs-ai-reason .text { font-size:13px; color:var(--ai-blue-dark); line-height:1.6; }
+.bs-ai-reason .text strong { font-weight:700; }
+.bs-actions { display:flex; gap:10px; margin-top:20px; }
+.bs-actions button {
+  flex:1; padding:14px 0; border-radius:12px; font-size:14px; font-weight:700;
+  border:none; cursor:pointer;
+}
+
+/* ==================== Rating Popup ==================== */
+.rating-overlay {
+  position:absolute; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,0.5); z-index:95; display:none;
+  align-items:center; justify-content:center; animation:fadeIn 0.2s;
+}
+.rating-overlay.show { display:flex; }
+.rating-card {
+  background:#fff; border-radius:var(--radius-lg); padding:28px 24px;
+  width:300px; text-align:center; animation:popIn 0.3s;
+}
+@keyframes popIn { from{opacity:0;transform:scale(0.8)} to{opacity:1;transform:scale(1)} }
+.rating-card .emoji { font-size:48px; margin-bottom:12px; }
+.rating-card .title { font-size:17px; font-weight:700; color:var(--gray-900); margin-bottom:6px; }
+.rating-card .sub { font-size:13px; color:var(--gray-400); margin-bottom:20px; }
+.rating-stars { display:flex; justify-content:center; gap:8px; margin-bottom:20px; }
+.rating-star {
+  font-size:36px; cursor:pointer; color:var(--gray-300); transition:all 0.15s;
+}
+.rating-star.active { color:var(--amber); transform:scale(1.1); }
+.rating-card .submit-btn {
+  width:100%; padding:12px; border-radius:12px; border:none; font-size:14px;
+  font-weight:700; cursor:pointer; background:var(--primary); color:#fff; transition:all 0.2s;
+}
+.rating-card .submit-btn:hover { background:var(--primary-dark); }
+
+/* ==================== Onboarding ==================== */
+.onboarding-overlay {
+  position:absolute; top:0; left:0; right:0; bottom:0;
+  background:#fff; z-index:200; display:none; flex-direction:column;
+}
+.onboarding-overlay.show { display:flex; }
+.onboarding-header {
+  padding:60px 24px 20px; text-align:center;
+}
+.onboarding-header .icon { font-size:48px; margin-bottom:16px; }
+.onboarding-header .title { font-size:22px; font-weight:800; color:var(--gray-900); margin-bottom:8px; }
+.onboarding-header .sub { font-size:14px; color:var(--gray-400); line-height:1.5; }
+.onboarding-progress { display:flex; justify-content:center; gap:6px; margin-top:16px; }
+.onboarding-progress .dot {
+  width:8px; height:8px; border-radius:50%; background:var(--gray-200); transition:all 0.3s;
+}
+.onboarding-progress .dot.active { width:24px; border-radius:4px; background:var(--primary); }
+.onboarding-body {
+  flex:1; padding:20px 24px; overflow-y:auto;
+}
+.onboarding-question { font-size:16px; font-weight:700; color:var(--gray-800); margin-bottom:16px; }
+.onboarding-options { display:flex; flex-direction:column; gap:10px; }
+.onboarding-option {
+  padding:14px 16px; border-radius:12px; border:2px solid var(--gray-200);
+  font-size:14px; font-weight:600; color:var(--gray-600); cursor:pointer;
+  transition:all 0.2s; display:flex; align-items:center; gap:10px; background:#fff;
+}
+.onboarding-option:hover { border-color:var(--primary-light); }
+.onboarding-option.selected {
+  border-color:var(--primary); background:var(--primary-light); color:var(--primary);
+}
+.onboarding-option .emoji { font-size:20px; }
+.onboarding-footer { padding:16px 24px 40px; }
+.onboarding-footer button {
+  width:100%; padding:14px; border-radius:12px; border:none; font-size:15px;
+  font-weight:700; cursor:pointer; background:var(--primary); color:#fff; transition:all 0.2s;
+}
+.onboarding-footer button:hover { background:var(--primary-dark); }
+.onboarding-footer button:disabled { background:var(--gray-300); cursor:not-allowed; }
+
+/* ==================== Toast ==================== */
+.toast {
+  position:absolute; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--gray-900); color:#fff; padding:10px 20px; border-radius:24px;
+  font-size:13px; font-weight:600; opacity:0; transition:all 0.3s; z-index:150;
+  pointer-events:none; white-space:nowrap; box-shadow:var(--shadow-lg);
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.success { background:var(--green); }
+.toast.ai { background:var(--ai-blue); }
+.toast.error { background:var(--red); }
+
+/* ==================== Hot Ranking ==================== */
+.hot-ranking { background:#fff; border-radius:var(--radius); padding:14px; margin-bottom:16px; box-shadow:var(--shadow); }
+.hot-ranking-title { font-size:14px; font-weight:700; color:var(--gray-800); margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+.hot-ranking-item {
+  display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--gray-50);
+}
+.hot-ranking-item:last-child { border-bottom:none; }
+.hot-ranking-num {
+  width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:800; color:#fff; flex-shrink:0;
+}
+.hot-ranking-num.rank1 { background:#FF4444; }
+.hot-ranking-num.rank2 { background:#FF8844; }
+.hot-ranking-num.rank3 { background:#FFAA44; }
+.hot-ranking-num.rank4, .hot-ranking-num.rank5 { background:var(--gray-400); }
+.hot-ranking-emoji { font-size:20px; }
+.hot-ranking-info { flex:1; }
+.hot-ranking-name { font-size:13px; font-weight:600; color:var(--gray-700); }
+.hot-ranking-count { font-size:11px; color:var(--gray-400); }
+.hot-ranking-price { font-size:13px; font-weight:700; color:var(--primary); }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <div class="phone-notch"></div>
+
+  <!-- ===== Onboarding (First-time Questionnaire) ===== -->
+  <div class="onboarding-overlay" id="onboarding">
+    <div class="onboarding-header">
+      <div class="icon" id="ob-icon">🍜</div>
+      <div class="title" id="ob-title">欢迎来到「吃什么」</div>
+      <div class="sub" id="ob-sub">花30秒告诉我你的口味，AI推荐更懂你</div>
+      <div class="onboarding-progress" id="ob-progress"></div>
+    </div>
+    <div class="onboarding-body">
+      <div class="onboarding-question" id="ob-question"></div>
+      <div class="onboarding-options" id="ob-options"></div>
+    </div>
+    <div class="onboarding-footer">
+      <button id="ob-next-btn" disabled>下一步</button>
+    </div>
+  </div>
+
+  <!-- ===== Status Bar ===== -->
+  <div class="status-bar">
+    <span id="status-time">12:30</span>
+    <div class="right-icons">
+      <span>📶</span><span>🔋 85%</span>
+    </div>
+  </div>
+
+  <!-- ===== App Header ===== -->
+  <div class="app-header">
+    <div class="app-header-top">
+      <div class="app-logo">
+        <div class="app-logo-icon">🍜</div>
+        <div>
+          <div class="app-logo-text">吃什么</div>
+          <div class="app-logo-sub">校园AI就餐助手</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="ai-badge">
+          <span class="dot"></span>
+          <span>AI推荐引擎已就绪</span>
+        </div>
+        <button onclick="logout()" style="background:none;border:1px solid var(--gray-200);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--gray-500);cursor:pointer;">退出</button>
+      </div>
+    </div>
+    <div class="search-bar" id="search-bar" onclick="openAIPage()">
+      <span class="search-icon">🤖</span>
+      <input type="text" id="search-input" placeholder="和AI说你想吃什么，比如：想吃辣的不超过15块..." readonly />
+      <span class="ai-search-icon" id="ai-search-btn">✨</span>
+    </div>
+  </div>
+
+  <!-- ===== Content Area ===== -->
+  <div class="content-area">
+
+    <!-- ====== Home Page ====== -->
+    <div class="page active" id="page-home">
+      <!-- Situation Card -->
+      <div class="situation-card">
+        <div class="greeting" id="greeting">中午好，学霸小明 👋</div>
+        <div class="situation-text" id="situation-text">下课高峰期，人有点多，推荐你吃点快又能坐下来的</div>
+        <div class="factors" id="factors">
+          <span class="factor">⏰ 12:30 午餐时段</span>
+          <span class="factor">🌡️ 28°C 晴</span>
+          <span class="factor">📍 二食堂附近</span>
+        </div>
+      </div>
+
+      <!-- Hot Ranking -->
+      <div class="hot-ranking">
+        <div class="hot-ranking-title">🔥 今日大家都在吃</div>
+        <div id="hot-ranking-list"></div>
+      </div>
+
+      <!-- AI Recommendations -->
+      <div class="rec-section-title">
+        <div class="left">
+          <span class="icon">🤖</span>
+          <span class="text">AI为你推荐</span>
+        </div>
+        <button class="refresh-btn" id="refresh-btn" onclick="refreshRecommendations()">
+          <span class="spin">🔄</span> 换一批
+        </button>
+      </div>
+      <div class="rec-list" id="rec-list"></div>
+    </div>
+
+    <!-- ====== AI Chat Page ====== -->
+    <div class="page page-ai" id="page-ai">
+      <div class="ai-chat-header">
+        <div class="title"><span class="ai-avatar-small">🤖</span> AI 吃饭助手</div>
+        <div style="font-size:11px;color:var(--gray-400);">告诉我你想吃什么，我来帮你找</div>
+      </div>
+      <div class="ai-chat-messages" id="ai-chat-messages"></div>
+      <div class="ai-chat-input-area">
+        <div class="ai-chat-suggestions" id="ai-chat-suggestions">
+          <div class="nlu-chip" onclick="sendAIQuery('想吃辣的不超过15块')">🌶️ 想吃辣的不超过15块</div>
+          <div class="nlu-chip" onclick="sendAIQuery('两人吃')">👥 两人吃</div>
+          <div class="nlu-chip" onclick="sendAIQuery('清淡点')">🥗 清淡点</div>
+          <div class="nlu-chip" onclick="sendAIQuery('今天想吃面')">🍜 今天想吃面</div>
+        </div>
+        <div class="ai-chat-input-wrap">
+          <input type="text" id="ai-chat-input" placeholder="和AI说你想吃什么..." />
+          <button id="ai-chat-send" onclick="handleAIChatSubmit()">发送</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== Discover Page ====== -->
+    <div class="page" id="page-discover">
+      <div class="rec-section-title">
+        <div class="left">
+          <span class="icon">🍽️</span>
+          <span class="text">校园菜品库</span>
+        </div>
+      </div>
+      <div class="category-bar" id="category-bar"></div>
+      <div class="food-grid" id="food-grid"></div>
+    </div>
+
+    <!-- ====== Profile Page ====== -->
+    <div class="page" id="page-profile">
+      <div class="profile-header">
+        <div class="profile-avatar" id="profile-avatar">😊</div>
+        <div class="profile-name" id="profile-name">学霸小明</div>
+        <div class="profile-sub" id="profile-sub">大二计算机系 · 使用14天</div>
+        <div class="profile-stats">
+          <div class="profile-stat">
+            <div class="num" id="profile-stat-adopted">0</div>
+            <div class="label">已采纳推荐</div>
+          </div>
+          <div class="profile-stat">
+            <div class="num" id="profile-stat-rating">0.0</div>
+            <div class="label">平均评分</div>
+          </div>
+          <div class="profile-stat">
+            <div class="num" id="profile-stat-new">0</div>
+            <div class="label">尝试新店</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <div class="profile-section-title">🎯 我的口味画像</div>
+        <div class="taste-tags" id="taste-tags">
+          <span class="taste-tag" style="color:var(--gray-400);">完成口味问卷后将生成画像</span>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <div class="profile-section-title">📋 最近选择记录</div>
+        <div class="history-list" id="history-list"></div>
+      </div>
+
+      <div class="profile-section">
+        <div class="profile-section-title">⚙️ 设置</div>
+        <div class="history-list">
+          <div class="history-item" style="cursor:pointer;" onclick="resetPrototype(true)">
+            <span class="emoji">🔄</span>
+            <div class="info"><div class="name">重新填写口味问卷</div><div class="time">更新你的偏好</div></div>
+            <span>›</span>
+          </div>
+          <div class="history-item" style="cursor:pointer;" onclick="openPrivacyModal()">
+            <span class="emoji">🔒</span>
+            <div class="info"><div class="name">隐私与数据管理</div><div class="time">修改用户名、密码和个人资料</div></div>
+            <span>›</span>
+          </div>
+          <div class="history-item" style="cursor:pointer;" onclick="resetPrototype(false)">
+            <span class="emoji">♻️</span>
+            <div class="info"><div class="name">重置原型到初始状态</div><div class="time">清除所有操作记录，回到首页</div></div>
+            <span>›</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== Bottom Nav ===== -->
+  <div class="bottom-nav">
+    <button class="nav-item active" data-page="home" onclick="switchPage('home')">
+      <span class="icon">🏠</span><span>首页</span>
+    </button>
+    <button class="nav-item" data-page="ai" onclick="switchPage('ai')">
+      <span class="icon">🤖</span><span>AI助手</span>
+    </button>
+    <button class="nav-item" data-page="discover" onclick="switchPage('discover')">
+      <span class="icon">🍽️</span><span>发现</span>
+    </button>
+    <button class="nav-item" data-page="profile" onclick="switchPage('profile')">
+      <span class="icon">👤</span><span>我的</span>
+    </button>
+  </div>
+
+  <!-- ===== Bottom Sheet (Food Detail) ===== -->
+  <div class="bottom-sheet-overlay" id="bs-overlay" onclick="closeBottomSheet()"></div>
+  <div class="bottom-sheet" id="bottom-sheet">
+    <div class="bottom-sheet-handle"></div>
+    <div class="bs-image" id="bs-image">🍜</div>
+    <div class="bs-content" id="bs-content"></div>
+  </div>
+
+  <!-- ===== Rating Popup ===== -->
+  <div class="rating-overlay" id="rating-overlay">
+    <div class="rating-card">
+      <div class="emoji" id="rating-emoji">😋</div>
+      <div class="title">这道菜怎么样？</div>
+      <div class="sub" id="rating-sub">你的评分能帮AI变得更懂你</div>
+      <div class="rating-stars" id="rating-stars">
+        <span class="rating-star" data-val="1">☆</span>
+        <span class="rating-star" data-val="2">☆</span>
+        <span class="rating-star" data-val="3">☆</span>
+        <span class="rating-star" data-val="4">☆</span>
+        <span class="rating-star" data-val="5">☆</span>
+      </div>
+      <button class="submit-btn" onclick="submitRating()">提交评分</button>
+    </div>
+  </div>
+
+  <!-- ===== Privacy Modal ===== -->
+  <div class="rating-overlay" id="privacy-overlay" onclick="if(event.target===this)closePrivacyModal()">
+    <div class="rating-card" style="max-width:320px;">
+      <div class="emoji">🔒</div>
+      <div class="title">隐私与数据管理</div>
+      <div class="sub">修改账号信息和个人资料</div>
+      <div style="width:100%;display:flex;flex-direction:column;gap:10px;margin:16px 0;">
+        <input type="password" id="priv-current-pwd" placeholder="当前密码（验证身份）"
+          style="width:100%;padding:10px 14px;border:2px solid var(--gray-200);border-radius:10px;font-size:14px;outline:none;">
+        <input type="text" id="priv-new-username" placeholder="新用户名（不改则留空）"
+          style="width:100%;padding:10px 14px;border:2px solid var(--gray-200);border-radius:10px;font-size:14px;outline:none;">
+        <input type="text" id="priv-new-name" placeholder="昵称（不改则留空）"
+          style="width:100%;padding:10px 14px;border:2px solid var(--gray-200);border-radius:10px;font-size:14px;outline:none;">
+        <input type="text" id="priv-new-bio" placeholder="个人简介，如：大二计算机系（不改则留空）"
+          style="width:100%;padding:10px 14px;border:2px solid var(--gray-200);border-radius:10px;font-size:14px;outline:none;">
+        <input type="password" id="priv-new-pwd" placeholder="新密码（不改则留空）"
+          style="width:100%;padding:10px 14px;border:2px solid var(--gray-200);border-radius:10px;font-size:14px;outline:none;">
+        <input type="password" id="priv-confirm-pwd" placeholder="确认新密码"
+          style="width:100%;padding:10px 14px;border:2px solid var(--gray-200);border-radius:10px;font-size:14px;outline:none;">
+      </div>
+      <button class="submit-btn" onclick="updateCredentials()">保存修改</button>
+      <button onclick="closePrivacyModal()" style="margin-top:8px;background:none;border:none;color:var(--gray-400);font-size:13px;cursor:pointer;width:100%;padding:6px;">取消</button>
+    </div>
+  </div>
+
+  <!-- ===== Toast ===== -->
+  <div class="toast" id="toast"></div>
+
+</div>
+
+<script>
+// ==================== Auth ====================
+let token = localStorage.getItem('token');
+let currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+if (!token || !currentUser || currentUser.role !== 'student') {
+  window.location.href = 'login.html';
+}
+
+async function api(path, options = {}) {
+  const res = await fetch(path, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token,
+      ...(options.headers || {})
+    }
+  });
+  if (res.status === 401) {
+    alert('登录已过期，请重新登录');
+    window.location.href = 'login.html';
+    return null;
+  }
+  return res;
+}
+
+function logout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href = 'login.html';
+}
+
+// ==================== Data (loaded from API) ====================
+let foodDB = [];
+let hotRanking = [];
+let categories = ['全部'];
+
+let userHistory = [];
+let tasteProfile = {
+  spicy: '',
+  cuisines: [],
+  budget: '',
+  restrictions: [],
+  adoptedCuisines: {},
+  adoptedTags: {},
+};
+
+const reasonTemplates = [
+  d => '根据你的口味画像，' + d.name + '符合你的偏好，' + (d.tags[0] || '值得一试'),
+  d => '全校' + d.hot + '人选了这道菜，好评率很高',
+  d => d.canteen + '的招牌菜，' + d.price + '元性价比很高',
+  d => '你最近偏好' + d.cuisine + '类，这道菜非常适合你',
+  d => '口味相似的同学' + Math.floor(75 + Math.random()*20) + '%都给了好评',
+];
+function generateReason(dish) {
+  return reasonTemplates[Math.floor(Math.random() * reasonTemplates.length)](dish);
+}
+
+async function loadData() {
+  try {
+    const [dishesRes, catsRes] = await Promise.all([
+      api('/api/dishes'), api('/api/categories')
+    ]);
+    if (!dishesRes || !catsRes) return false;
+    const dishes = await dishesRes.json();
+    foodDB = dishes.map(d => ({ ...d, reason: generateReason(d) }));
+    const cats = await catsRes.json();
+    categories = cats.map(c => c.name);
+    await loadHotRanking();
+    return true;
+  } catch(e) {
+    console.error('Failed to load data:', e);
+    return false;
+  }
+}
+
+async function loadHotRanking() {
+  try {
+    const res = await api('/api/dishes/hot');
+    if (!res) return false;
+    hotRanking = await res.json();
+    return true;
+  } catch(e) {
+    console.error('Failed to load hot ranking:', e);
+    return false;
+  }
+}
+let currentCategory = '全部';
+
+// Onboarding questions
+const onboardingSteps = [
+  { icon:'🌶️', title:'你能吃多辣？', sub:'这决定了推荐时的辣度过滤', question:'选择你的辣度偏好', options:[
+    { emoji:'😌', text:'不辣，谢谢', value:'不辣' },
+    { emoji:'🙂', text:'微辣就好', value:'微辣' },
+    { emoji:'😎', text:'中辣没问题', value:'中辣' },
+    { emoji:'🔥', text:'越辣越爽！', value:'重辣' },
+  ]},
+  { icon:'🍱', title:'你偏爱哪种菜系？', sub:'可多选，我们会优先推荐', question:'选择你喜欢的菜系（可多选）', options:[
+    { emoji:'🍚', text:'快餐/盖浇饭', value:'快餐' },
+    { emoji:'🍜', text:'面食/米粉', value:'面食' },
+    { emoji:'🍲', text:'炒菜/香锅', value:'炒菜' },
+    { emoji:'🥟', text:'汤类/馄饨', value:'汤类' },
+    { emoji:'🥙', text:'小吃类', value:'小吃' },
+  ], multi:true },
+  { icon:'💰', title:'你每餐预算多少？', sub:'帮你过滤超标的选项', question:'你的每餐舒适预算是？', options:[
+    { emoji:'💸', text:'10元以内，省着花', value:'0-10' },
+    { emoji:'😊', text:'10-15元，正常水平', value:'10-15' },
+    { emoji:'😎', text:'15-20元，吃好一点', value:'15-20' },
+    { emoji:'🤑', text:'20元以上，不差钱', value:'20+' },
+  ]},
+  { icon:'🚫', title:'有什么忌口吗？', sub:'我们会永远排除这些选项', question:'选择你不想吃的（可多选）', options:[
+    { emoji:'🥬', text:'不吃香菜', value:'不吃香菜' },
+    { emoji:'🧄', text:'不吃蒜', value:'不吃蒜' },
+    { emoji:'🥕', text:'不吃胡萝卜', value:'不吃胡萝卜' },
+    { emoji:'🐷', text:'不吃猪肉', value:'不吃猪肉' },
+    { emoji:'✅', text:'没有忌口，都能吃', value:'无', exclusive:true },
+  ], multi:true },
+];
+
+let obStep = 0;
+let obAnswers = {};
+let currentRating = 0;
+let currentRatingFoodId = null;
+
+// ==================== Init ====================
+async function init() {
+  // Show user name
+  const nameEl = document.querySelector('.app-logo-sub');
+  if (nameEl && currentUser) nameEl.textContent = currentUser.name || currentUser.username;
+
+  // Load data from API first
+  await loadData();
+
+  // Check if first time
+  if (!localStorage.getItem('chisha_onboarded')) {
+    showOnboarding();
+  } else {
+    // Load saved taste profile and history from localStorage
+    const savedTaste = localStorage.getItem('chisha_taste');
+    if (savedTaste) {
+      try { tasteProfile = JSON.parse(savedTaste); } catch(e) {}
+    }
+    const savedHistory = localStorage.getItem('chisha_history');
+    if (savedHistory) {
+      try { userHistory = JSON.parse(savedHistory); } catch(e) {}
+    }
+  }
+  updateTime();
+  setInterval(updateTime, 60000);
+  renderRecommendations();
+  renderHotRanking();
+  renderCategories();
+  renderFoodGrid();
+  renderTasteProfile();
+  renderHistory();
+  renderProfileHeader();
+  setupSearchInteraction();
+  setupRatingStars();
+}
+
+// ==================== Reset ====================
+function resetPrototype(withOnboarding) {
+  // 1. Close all overlays
+  closeBottomSheet();
+  clearAIChat();
+  document.getElementById('rating-overlay').classList.remove('show');
+
+  // 2. Clear taste-related localStorage（保留历史记录，仅完全重置时清除）
+  localStorage.removeItem('chisha_onboarded');
+  localStorage.removeItem('chisha_taste');
+  if (!withOnboarding) {
+    // 完全重置：清除所有数据
+    localStorage.removeItem('chisha_history');
+  }
+
+  // 3. Reset state variables
+  currentCategory = '全部';
+  obStep = 0;
+  obAnswers = {};
+  currentRating = 0;
+  currentRatingFoodId = null;
+  currentRecs = [];
+  tasteProfile = { spicy:'', cuisines:[], budget:'', restrictions:[], adoptedCuisines:{}, adoptedTags:{} };
+  // 重新填问卷时保留历史记录，完全重置时才清空
+  if (!withOnboarding) {
+    userHistory = [];
+  }
+
+  // 4. Reset search input
+  document.getElementById('search-input').value = '';
+
+  // 5. Reset rating stars
+  document.querySelectorAll('.rating-star').forEach(s => {
+    s.classList.remove('active');
+    s.style.color = '';
+  });
+
+  // 6. Switch to home page
+  switchPage('home');
+
+  // 7. Reload data from API and re-render
+  loadData().then(() => {
+    renderRecommendations();
+    renderHotRanking();
+    renderCategories();
+    renderFoodGrid();
+    renderTasteProfile();
+    renderHistory();
+    renderProfileHeader();
+  });
+
+  // 8. Scroll content to top
+  document.querySelector('.content-area').scrollTop = 0;
+
+  // 9. Show onboarding or toast
+  if (withOnboarding) {
+    showOnboarding();
+    showToast('已重置，请重新填写口味问卷', 'ai');
+  } else {
+    showToast('原型已重置到初始状态', 'success');
+  }
+}
+
+function updateTime() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('status-time').textContent = `${h}:${m}`;
+
+  // Update greeting based on time + current user name
+  const greetingEl = document.getElementById('greeting');
+  const sitEl = document.getElementById('situation-text');
+  const factorsEl = document.getElementById('factors');
+  const hour = now.getHours();
+  const displayName = currentUser?.name || currentUser?.username || '同学';
+  let greetingText, situationText, mealLabel;
+
+  if (hour < 10) {
+    greetingText = `早上好，${displayName} 👋`;
+    situationText = '早餐时间！推荐你吃点热乎的，开启元气一天';
+    mealLabel = '早餐时段';
+  } else if (hour < 14) {
+    greetingText = `中午好，${displayName} 👋`;
+    situationText = '下课高峰期，人有点多，推荐你吃点快又能坐下来的';
+    mealLabel = '午餐时段';
+  } else if (hour < 17) {
+    greetingText = `下午好，${displayName} 👋`;
+    situationText = '下午茶时间，要不要来点小吃垫垫肚子？';
+    mealLabel = '下午茶时段';
+  } else if (hour < 22) {
+    greetingText = `晚上好，${displayName} 👋`;
+    situationText = '晚餐时段，今天想吃点什么好的犒劳自己？';
+    mealLabel = '晚餐时段';
+  } else {
+    greetingText = `夜宵时间，${displayName} 🌙`;
+    situationText = '还在学习？来点夜宵补充能量吧，但别吃太撑~';
+    mealLabel = '夜宵时段';
+  }
+
+  greetingEl.textContent = greetingText;
+  sitEl.textContent = situationText;
+  factorsEl.innerHTML = `<span class="factor">⏰ ${h}:${m} ${mealLabel}</span>
+          <span class="factor">🌡️ 28°C 晴</span>
+          <span class="factor">📍 二食堂附近</span>`;
+}
+
+// ==================== Onboarding ====================
+function showOnboarding() {
+  document.getElementById('onboarding').classList.add('show');
+  obStep = 0;
+  obAnswers = {};
+  renderOnboardingStep();
+}
+
+function renderOnboardingStep() {
+  const step = onboardingSteps[obStep];
+  document.getElementById('ob-icon').textContent = step.icon;
+  document.getElementById('ob-title').textContent = step.title;
+  document.getElementById('ob-sub').textContent = step.sub;
+  document.getElementById('ob-question').textContent = step.question;
+
+  // Progress dots
+  const progressEl = document.getElementById('ob-progress');
+  progressEl.innerHTML = '';
+  onboardingSteps.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i === obStep ? ' active' : '');
+    progressEl.appendChild(dot);
+  });
+
+  // Options
+  const optionsEl = document.getElementById('ob-options');
+  optionsEl.innerHTML = '';
+  const currentVal = obAnswers[obStep] || (step.multi ? [] : null);
+
+  step.options.forEach(opt => {
+    const div = document.createElement('div');
+    div.className = 'onboarding-option';
+    let isSelected;
+    if (step.multi) {
+      isSelected = Array.isArray(currentVal) && currentVal.includes(opt.value);
+    } else {
+      isSelected = currentVal === opt.value;
+    }
+    if (isSelected) div.classList.add('selected');
+
+    div.innerHTML = `<span class="emoji">${opt.emoji}</span> <span>${opt.text}</span>`;
+    div.onclick = () => selectOnboarding(opt.value, step.multi, opt.exclusive, step.options);
+    optionsEl.appendChild(div);
+  });
+
+  // Button state
+  const btn = document.getElementById('ob-next-btn');
+  if (obStep === onboardingSteps.length - 1) {
+    btn.textContent = '完成，开始使用';
+  } else {
+    btn.textContent = '下一步';
+  }
+  const hasAnswer = step.multi ? (Array.isArray(currentVal) && currentVal.length > 0) : !!currentVal;
+  btn.disabled = !hasAnswer;
+  btn.onclick = nextOnboarding;
+}
+
+function selectOnboarding(value, multi, exclusive, allOptions) {
+  if (multi) {
+    if (!Array.isArray(obAnswers[obStep])) obAnswers[obStep] = [];
+    const idx = obAnswers[obStep].indexOf(value);
+    if (idx >= 0) {
+      obAnswers[obStep].splice(idx, 1);
+    } else {
+      // Selecting an exclusive option clears all others
+      if (exclusive) {
+        obAnswers[obStep] = [value];
+      } else {
+        // Selecting a normal option removes any exclusive option
+        const exclusiveVals = (allOptions || []).filter(o => o.exclusive).map(o => o.value);
+        obAnswers[obStep] = obAnswers[obStep].filter(v => !exclusiveVals.includes(v));
+        obAnswers[obStep].push(value);
+      }
+    }
+  } else {
+    obAnswers[obStep] = value;
+  }
+  renderOnboardingStep();
+}
+
+function nextOnboarding() {
+  if (obStep < onboardingSteps.length - 1) {
+    obStep++;
+    renderOnboardingStep();
+  } else {
+    localStorage.setItem('chisha_onboarded', '1');
+    // Build taste profile from onboarding answers
+    tasteProfile.spicy = obAnswers[0] || '';
+    tasteProfile.cuisines = Array.isArray(obAnswers[1]) ? obAnswers[1] : (obAnswers[1] ? [obAnswers[1]] : []);
+    tasteProfile.budget = obAnswers[2] || '';
+    const restrictions = Array.isArray(obAnswers[3]) ? obAnswers[3] : (obAnswers[3] ? [obAnswers[3]] : []);
+    tasteProfile.restrictions = restrictions;
+    localStorage.setItem('chisha_taste', JSON.stringify(tasteProfile));
+    renderTasteProfile();
+
+    document.getElementById('onboarding').classList.remove('show');
+    showToast('口味画像已生成，AI推荐已为你定制！', 'ai');
+    setTimeout(() => refreshRecommendations(), 500);
+  }
+}
+
+// ==================== Recommendations ====================
+let currentRecs = [];
+
+function renderRecommendations() {
+  const list = document.getElementById('rec-list');
+  list.innerHTML = '<div class="ai-loading"><div>🤖 AI正在分析你的口味画像</div><div class="dots"><span></span><span></span><span></span></div></div>';
+
+  setTimeout(() => {
+    // Simulate AI recommendation: pick 5 items, prioritizing variety
+    const shuffled = [...foodDB].sort(() => Math.random() - 0.5);
+    currentRecs = shuffled.slice(0, 5);
+    list.innerHTML = '';
+    currentRecs.forEach((food, idx) => {
+      list.appendChild(createRecCard(food, idx));
+    });
+  }, 800);
+}
+
+function createRecCard(food, idx) {
+  const card = document.createElement('div');
+  card.className = 'rec-card';
+  card.style.animationDelay = (idx * 0.1) + 's';
+  card.dataset.foodId = food.id;
+
+  card.innerHTML = `
+    <div class="rec-card-header">
+      <div class="rec-card-img">${food.emoji}</div>
+      <div class="rec-card-info">
+        <div class="rec-card-name">${food.name}</div>
+        <div class="rec-card-meta">
+          <span class="rec-card-tag price">¥${food.price}</span>
+          <span class="rec-card-tag canteen">${food.canteen}</span>
+          <span class="rec-card-tag spicy">${food.spicy}</span>
+          <span class="rec-card-tag distance">${food.distance}</span>
+        </div>
+        <div class="rec-card-reason">
+          <span class="ai-icon">✨</span>
+          <span>${food.reason}</span>
+        </div>
+      </div>
+    </div>
+    <div class="rec-card-actions">
+      <button class="btn-adopt" onclick="adoptRecommendation(${food.id}, this)">👍 采纳</button>
+      <button class="btn-dismiss" onclick="dismissRecommendation(${food.id}, this)">👎 忽略</button>
+      <button class="btn-dismiss" onclick="showFoodDetail(${food.id})" style="flex:0.5;">详情</button>
+    </div>
+  `;
+
+  card.querySelector('.rec-card-header').addEventListener('click', () => showFoodDetail(food.id));
+  return card;
+}
+
+async function adoptRecommendation(foodId, btn) {
+  const card = btn.closest('.rec-card');
+  card.classList.add('adopted');
+  card.querySelector('.rec-card-actions').innerHTML = '<div style="text-align:center;color:var(--green);font-weight:600;font-size:13px;padding:4px;">✓ 已采纳，感谢反馈！</div>';
+  currentRatingFoodId = foodId;
+  const dish = foodDB.find(f => f.id === foodId);
+  if (dish) addToHistory(dish);
+  setTimeout(() => showRatingPopup(foodId), 300);
+  showToast('已记录你的选择，AI正在变得更懂你', 'success');
+  await api('/api/recommendations/log', { method:'POST', body: JSON.stringify({ dish_id: foodId, action: 'adopt' }) });
+  await loadHotRanking();
+  renderHotRanking();
+}
+
+function dismissRecommendation(foodId, btn) {
+  const card = btn.closest('.rec-card');
+  card.classList.add('dismissed');
+  showToast('已忽略，下次不再推荐这道菜');
+  setTimeout(() => {
+    card.style.transition = 'all 0.3s';
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(-100%)';
+    setTimeout(() => card.remove(), 300);
+  }, 1000);
+}
+
+function refreshRecommendations() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  renderRecommendations();
+  setTimeout(() => btn.classList.remove('spinning'), 600);
+  showToast('🤖 AI重新计算了推荐结果', 'ai');
+}
+
+// ==================== Hot Ranking ====================
+function renderHotRanking() {
+  const el = document.getElementById('hot-ranking-list');
+  el.innerHTML = '';
+  hotRanking.forEach((food, i) => {
+    const item = document.createElement('div');
+    item.className = 'hot-ranking-item';
+    item.style.cursor = 'pointer';
+    item.innerHTML = `
+      <div class="hot-ranking-num rank${i+1}">${i+1}</div>
+      <span class="hot-ranking-emoji">${food.emoji}</span>
+      <div class="hot-ranking-info">
+        <div class="hot-ranking-name">${food.name}</div>
+        <div class="hot-ranking-count">${food.total_hot || food.hot}人选了 · ${food.canteen}</div>
+      </div>
+      <div class="hot-ranking-price">¥${food.price}</div>
+    `;
+    item.onclick = () => showFoodDetail(food.id);
+    el.appendChild(item);
+  });
+}
+
+// ==================== Discover Page ====================
+function renderCategories() {
+  const bar = document.getElementById('category-bar');
+  bar.innerHTML = '';
+  categories.forEach(cat => {
+    const item = document.createElement('div');
+    item.className = 'category-item' + (cat === currentCategory ? ' active' : '');
+    item.textContent = cat;
+    item.onclick = () => {
+      currentCategory = cat;
+      renderCategories();
+      renderFoodGrid();
+    };
+    bar.appendChild(item);
+  });
+}
+
+function renderFoodGrid() {
+  const grid = document.getElementById('food-grid');
+  grid.innerHTML = '';
+  const filtered = currentCategory === '全部' ? foodDB : foodDB.filter(f => f.cuisine === currentCategory);
+  filtered.forEach(food => {
+    const card = document.createElement('div');
+    card.className = 'food-card';
+    card.style.position = 'relative';
+    if ((food.total_hot || food.hot) > 80) {
+      const badge = document.createElement('div');
+      badge.className = 'hot-badge';
+      badge.textContent = '🔥热';
+      card.appendChild(badge);
+    }
+    card.innerHTML += `
+      <div class="food-card-img">${food.emoji}</div>
+      <div class="food-card-body">
+        <div class="food-card-name">${food.name}</div>
+        <div class="food-card-meta">${food.canteen} · ${food.spicy}</div>
+        <div class="food-card-price">¥${food.price}<span class="unit">/份</span></div>
+      </div>
+    `;
+    card.onclick = () => showFoodDetail(food.id);
+    grid.appendChild(card);
+  });
+}
+
+// ==================== Profile ====================
+function renderProfileHeader() {
+  const nameEl = document.getElementById('profile-name');
+  const subEl = document.getElementById('profile-sub');
+  const adoptedEl = document.getElementById('profile-stat-adopted');
+  const ratingEl = document.getElementById('profile-stat-rating');
+  const newEl = document.getElementById('profile-stat-new');
+
+  // Name & bio
+  if (nameEl) nameEl.textContent = currentUser?.name || currentUser?.username || '同学';
+
+  // Bio + usage days
+  let bioText = currentUser?.bio || '';
+  let daysText = '';
+  if (currentUser?.created_at) {
+    const created = new Date(currentUser.created_at);
+    const now = new Date();
+    const days = Math.max(1, Math.floor((now - created) / (1000 * 60 * 60 * 24)));
+    daysText = ` · 使用${days}天`;
+  }
+  if (subEl) subEl.textContent = (bioText || '校园美食探索者') + daysText;
+
+  // Stats from history
+  const adoptedCount = userHistory.length;
+  const ratedItems = userHistory.filter(h => h.rating > 0);
+  const avgRating = ratedItems.length
+    ? (ratedItems.reduce((sum, h) => sum + h.rating, 0) / ratedItems.length).toFixed(1)
+    : '0.0';
+  const uniqueCanteens = new Set(userHistory.map(h => h.canteen).filter(Boolean)).size;
+
+  if (adoptedEl) adoptedEl.textContent = adoptedCount;
+  if (ratingEl) ratingEl.textContent = avgRating;
+  if (newEl) newEl.textContent = uniqueCanteens;
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  el.innerHTML = '';
+  if (userHistory.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:13px;">还没有选择记录，采纳推荐菜品后会显示在这里</div>';
+    return;
+  }
+  userHistory.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML = `
+      <span class="emoji">${item.emoji}</span>
+      <div class="info">
+        <div class="name">${item.name}</div>
+        <div class="time">${item.time}</div>
+      </div>
+      <div class="rating">${item.rating ? '★'.repeat(item.rating) + '☆'.repeat(5-item.rating) : '⏳ 待评'}</div>
+    `;
+    el.appendChild(div);
+  });
+}
+
+// ==================== Taste Profile ====================
+function renderTasteProfile() {
+  const el = document.getElementById('taste-tags');
+  if (!el) return;
+  const tags = [];
+
+  if (tasteProfile.spicy) tags.push({ text: tasteProfile.spicy, icon: '🌶️' });
+
+  // Top cuisines from adoption history
+  const sortedCuisines = Object.entries(tasteProfile.adoptedCuisines)
+    .sort((a, b) => b[1] - a[1]).slice(0, 2).map(([c]) => c);
+  const allCuisines = [...new Set([...(tasteProfile.cuisines || []), ...sortedCuisines])];
+  if (allCuisines.length > 0) {
+    tags.push({ text: allCuisines.slice(0, 3).join('/'), icon: '🍴' });
+  }
+
+  if (tasteProfile.budget) tags.push({ text: tasteProfile.budget + '元', icon: '💰' });
+
+  (tasteProfile.restrictions || []).forEach(r => {
+    if (r !== '无') tags.push({ text: r, icon: '🚫' });
+  });
+
+  // Top tags from adopted dishes
+  const sortedTags = Object.entries(tasteProfile.adoptedTags)
+    .sort((a, b) => b[1] - a[1]).slice(0, 2).map(([t]) => t);
+  sortedTags.forEach(t => tags.push({ text: '偏好' + t, icon: '🏷️' }));
+
+  if (tags.length === 0) {
+    el.innerHTML = '<span class="taste-tag" style="color:var(--gray-400);">完成口味问卷后将生成画像</span>';
+    return;
+  }
+
+  el.innerHTML = tags.map(t => `<span class="taste-tag">${t.icon || ''} ${t.text}</span>`).join('');
+}
+
+function updateTasteProfileFromDish(dish) {
+  // Track cuisine adoption count
+  if (dish.cuisine) {
+    tasteProfile.adoptedCuisines[dish.cuisine] = (tasteProfile.adoptedCuisines[dish.cuisine] || 0) + 1;
+  }
+  // Track dish tags
+  (dish.tags || []).forEach(tag => {
+    tasteProfile.adoptedTags[tag] = (tasteProfile.adoptedTags[tag] || 0) + 1;
+  });
+  renderTasteProfile();
+}
+
+function addToHistory(dish) {
+  const now = new Date();
+  const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+  userHistory.unshift({
+    name: dish.name,
+    emoji: dish.emoji,
+    canteen: dish.canteen,
+    time: '今天 ' + timeStr,
+    rating: 0,
+    dishId: dish.id,
+  });
+  // Keep max 20 records
+  if (userHistory.length > 20) userHistory = userHistory.slice(0, 20);
+  renderHistory();
+  renderProfileHeader();
+  updateTasteProfileFromDish(dish);
+  // Save to localStorage
+  localStorage.setItem('chisha_history', JSON.stringify(userHistory));
+}
+
+// ==================== Food Detail Bottom Sheet ====================
+function showFoodDetail(foodId) {
+  const food = foodDB.find(f => f.id === foodId);
+  if (!food) return;
+  document.getElementById('bs-image').textContent = food.emoji;
+  const content = document.getElementById('bs-content');
+  content.innerHTML = `
+    <div class="bs-name">${food.name}</div>
+    <div class="bs-tags">
+      <span class="rec-card-tag price">¥${food.price}</span>
+      <span class="rec-card-tag canteen">${food.canteen}</span>
+      <span class="rec-card-tag spicy">${food.spicy}</span>
+      <span class="rec-card-tag distance">${food.distance}</span>
+      ${food.tags.map(t => `<span class="rec-card-tag" style="background:var(--gray-100);color:var(--gray-600);">${t}</span>`).join('')}
+    </div>
+    <div class="bs-info-row"><span class="label">菜系分类</span><span class="value">${food.cuisine}</span></div>
+    <div class="bs-info-row"><span class="label">预估出餐时间</span><span class="value">${Math.floor(Math.random()*5+3)}分钟</span></div>
+    <div class="bs-info-row"><span class="label">今日选择人数</span><span class="value">${food.total_hot || food.hot}人</span></div>
+    <div class="bs-info-row"><span class="label">营养标签</span><span class="value">${food.tags.join(' · ')}</span></div>
+    <div class="bs-ai-reason">
+      <div class="icon">🤖</div>
+      <div class="text"><strong>AI推荐理由：</strong>${food.reason}</div>
+    </div>
+    <div class="bs-actions">
+      <button class="btn-adopt" onclick="adoptFromDetail(${food.id})">👍 采纳推荐</button>
+      <button class="btn-dismiss" onclick="closeBottomSheet()">关闭</button>
+    </div>
+  `;
+  document.getElementById('bs-overlay').classList.add('show');
+  document.getElementById('bottom-sheet').classList.add('show');
+}
+
+function closeBottomSheet() {
+  document.getElementById('bs-overlay').classList.remove('show');
+  document.getElementById('bottom-sheet').classList.remove('show');
+}
+
+async function adoptFromDetail(foodId) {
+  closeBottomSheet();
+  currentRatingFoodId = foodId;
+  const dish = foodDB.find(f => f.id === foodId);
+  if (dish) addToHistory(dish);
+  setTimeout(() => showRatingPopup(foodId), 300);
+  showToast('已记录你的选择，AI正在变得更懂你', 'success');
+  await api('/api/recommendations/log', { method:'POST', body: JSON.stringify({ dish_id: foodId, action: 'adopt' }) });
+  await loadHotRanking();
+  renderHotRanking();
+}
+
+// ==================== Rating ====================
+function setupRatingStars() {
+  const stars = document.querySelectorAll('.rating-star');
+  stars.forEach(star => {
+    star.addEventListener('click', () => {
+      const val = parseInt(star.dataset.val);
+      currentRating = val;
+      stars.forEach(s => {
+        s.classList.toggle('active', parseInt(s.dataset.val) <= val);
+      });
+      const emojis = ['😕','🙂','😊','😋','🤩'];
+      const subs = ['帮AI改进','还行','还不错','很好吃！','太棒了！强烈推荐'];
+      document.getElementById('rating-emoji').textContent = emojis[val-1];
+      document.getElementById('rating-sub').textContent = subs[val-1];
+    });
+    star.addEventListener('mouseenter', () => {
+      const val = parseInt(star.dataset.val);
+      stars.forEach(s => {
+        s.style.color = parseInt(s.dataset.val) <= val ? 'var(--amber)' : 'var(--gray-300)';
+      });
+    });
+  });
+  document.getElementById('rating-stars').addEventListener('mouseleave', () => {
+    stars.forEach(s => {
+      s.style.color = '';
+      s.classList.contains('active');
+    });
+  });
+}
+
+function showRatingPopup(foodId) {
+  currentRating = 0;
+  currentRatingFoodId = foodId;
+  document.querySelectorAll('.rating-star').forEach(s => {
+    s.classList.remove('active');
+    s.textContent = '☆';
+    s.style.color = '';
+  });
+  // Use star characters
+  document.querySelectorAll('.rating-star').forEach(s => { s.textContent = '★'; });
+  document.getElementById('rating-emoji').textContent = '😋';
+  document.getElementById('rating-sub').textContent = '你的评分能帮AI变得更懂你';
+  document.getElementById('rating-overlay').classList.add('show');
+}
+
+async function submitRating() {
+  if (currentRating === 0) {
+    showToast('请先选择星级评分');
+    return;
+  }
+  document.getElementById('rating-overlay').classList.remove('show');
+
+  const food = foodDB.find(f => f.id === currentRatingFoodId);
+
+  // Update history record with rating
+  const histItem = userHistory.find(h => h.dishId === currentRatingFoodId);
+  if (histItem) {
+    histItem.rating = currentRating;
+    renderHistory();
+    renderProfileHeader();
+    localStorage.setItem('chisha_history', JSON.stringify(userHistory));
+  }
+
+  // Submit rating to API
+  try {
+    await api('/api/ratings', { method:'POST', body: JSON.stringify({ dish_id: currentRatingFoodId, score: currentRating }) });
+  } catch(e) { console.error('Rating submit failed:', e); }
+
+  if (currentRating >= 4) {
+    showToast(`感谢评分！${food.name}已加入你的偏好 ✓`, 'success');
+  } else if (currentRating <= 2) {
+    showToast('收到反馈，AI会降低这类推荐频率', 'ai');
+  } else {
+    showToast('感谢评分，AI正在学习你的偏好', 'success');
+  }
+}
+
+// ==================== Privacy Modal ====================
+function openPrivacyModal() {
+  document.getElementById('priv-current-pwd').value = '';
+  document.getElementById('priv-new-username').value = currentUser?.username || '';
+  document.getElementById('priv-new-name').value = currentUser?.name || '';
+  document.getElementById('priv-new-bio').value = currentUser?.bio || '';
+  document.getElementById('priv-new-pwd').value = '';
+  document.getElementById('priv-confirm-pwd').value = '';
+  document.getElementById('privacy-overlay').classList.add('show');
+}
+
+function closePrivacyModal() {
+  document.getElementById('privacy-overlay').classList.remove('show');
+}
+
+async function updateCredentials() {
+  const currentPwd = document.getElementById('priv-current-pwd').value.trim();
+  const newUsername = document.getElementById('priv-new-username').value.trim();
+  const newName = document.getElementById('priv-new-name').value.trim();
+  const newBio = document.getElementById('priv-new-bio').value.trim();
+  const newPwd = document.getElementById('priv-new-pwd').value.trim();
+  const confirmPwd = document.getElementById('priv-confirm-pwd').value.trim();
+
+  if (!currentPwd) { showToast('请输入当前密码', 'error'); return; }
+  if (newPwd && newPwd !== confirmPwd) { showToast('两次新密码不一致', 'error'); return; }
+
+  const usernameChanged = newUsername && newUsername !== currentUser?.username;
+  const passwordChanged = !!newPwd;
+  const profileChanged = (newName !== currentUser?.name) || (newBio !== currentUser?.bio);
+
+  if (!usernameChanged && !passwordChanged && !profileChanged) {
+    showToast('没有需要保存的修改', 'error'); return;
+  }
+
+  try {
+    const payload = { currentPassword: currentPwd };
+    if (usernameChanged) payload.newUsername = newUsername;
+    if (passwordChanged) payload.newPassword = newPwd;
+    if (newName !== currentUser?.name) payload.newName = newName;
+    if (newBio !== currentUser?.bio) payload.newBio = newBio;
+
+    const res = await api('/api/auth/update', {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+    if (!res) return;
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || '修改失败', 'error');
+      return;
+    }
+    // Update local state
+    currentUser = { ...currentUser, ...data.user };
+    localStorage.setItem('user', JSON.stringify(currentUser));
+    renderProfileHeader();
+    updateTime();
+    // Sync top-bar user name
+    const nameEl = document.querySelector('.app-logo-sub');
+    if (nameEl && currentUser) nameEl.textContent = currentUser.name || currentUser.username;
+
+    if (usernameChanged || passwordChanged) {
+      showToast('修改成功！请重新登录', 'success');
+      closePrivacyModal();
+      setTimeout(() => logout(), 1500);
+    } else {
+      showToast('个人资料已更新', 'success');
+      closePrivacyModal();
+    }
+  } catch(e) {
+    showToast('网络错误', 'error');
+  }
+}
+
+// ==================== AI Chat ====================
+let aiChatHistory = [];
+
+function setupSearchInteraction() {
+  // Search bar is now a quick entry to AI page — clicking navigates there
+  // Chat panel input
+  const chatInput = document.getElementById('ai-chat-input');
+  if (chatInput) {
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleAIChatSubmit();
+    });
+  }
+}
+
+function openAIPage(initialQuery) {
+  switchPage('ai');
+  // Initialize welcome message if first time
+  if (aiChatHistory.length === 0) {
+    const displayName = currentUser?.name || currentUser?.username || '同学';
+    aiChatHistory.push({
+      role: 'ai',
+      text: `你好呀 ${displayName}！我是你的 AI 吃饭助手 🍽️\n可以直接告诉我你想吃什么，比如「想吃辣的不超过15块」或「两人吃」，我会根据食堂当前在售菜品给你推荐~`,
+      time: new Date().toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' })
+    });
+    renderAIChatMessages();
+  }
+  if (initialQuery) {
+    sendAIQuery(initialQuery);
+  }
+  setTimeout(() => {
+    const chatInput = document.getElementById('ai-chat-input');
+    if (chatInput) chatInput.focus();
+  }, 300);
+}
+
+// Legacy: kept for backward compatibility, redirects to AI page
+function openAIChat(initialQuery) {
+  openAIPage(initialQuery);
+}
+
+function sendAIQuery(query) {
+  if (!query.trim()) return;
+
+  // Add user message
+  aiChatHistory.push({
+    role: 'user',
+    text: query,
+    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  });
+  renderAIChatMessages();
+
+  // Show typing
+  showAITyping();
+
+  // Simulate AI thinking and respond
+  setTimeout(() => {
+    removeAITyping();
+    const response = generateAIResponse(query);
+    aiChatHistory.push({
+      role: 'ai',
+      text: response.text,
+      dishes: response.dishes,
+      parsed: response.parsed,
+      time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    });
+    renderAIChatMessages();
+  }, 600 + Math.random() * 400);
+}
+
+function handleAIChatSubmit() {
+  const input = document.getElementById('ai-chat-input');
+  const query = input.value.trim();
+  if (!query) return;
+  input.value = '';
+  sendAIQuery(query);
+}
+
+function generateAIResponse(query) {
+  const parsed = parseNLU(query);
+
+  // Greeting / casual chat
+  const greetWords = ['你好', '您好', '嗨', 'hello', 'hi', '在吗', '你是谁'];
+  if (greetWords.some(w => query.toLowerCase().includes(w))) {
+    return {
+      text: '你好！我是校园吃饭助手 🤖\n可以帮你根据口味、预算、人数推荐食堂菜品，今天想吃点什么？',
+      dishes: foodDB.slice(0, 2),
+      parsed
+    };
+  }
+
+  // Filter dishes
+  let filtered = foodDB.filter(f => f.is_available !== false);
+  let relaxed = false;
+
+  if (parsed.maxPrice) filtered = filtered.filter(f => f.price <= parsed.maxPrice);
+  if (parsed.spicy === '辣') filtered = filtered.filter(f => f.spicy !== '不辣');
+  if (parsed.spicy === '不辣') filtered = filtered.filter(f => f.spicy === '不辣');
+  if (parsed.cuisine) filtered = filtered.filter(f => f.cuisine === parsed.cuisine);
+  if (parsed.partySize && parsed.partySize >= 2) {
+    filtered = filtered.filter(f => f.tags.includes('聚餐') || f.tags.includes('分量足') || f.price >= 18);
+  }
+
+  // Dietary restrictions from taste profile
+  if (tasteProfile.restrictions && tasteProfile.restrictions.length > 0) {
+    const avoidTags = [];
+    if (tasteProfile.restrictions.includes('不吃香菜')) avoidTags.push('香菜');
+    if (tasteProfile.restrictions.includes('不吃蒜')) avoidTags.push('蒜');
+    if (tasteProfile.restrictions.includes('不吃胡萝卜')) avoidTags.push('胡萝卜');
+    if (tasteProfile.restrictions.includes('不吃猪肉')) avoidTags.push('猪肉');
+    if (avoidTags.length > 0) {
+      filtered = filtered.filter(f => !avoidTags.some(tag => f.name.includes(tag) || f.tags.includes(tag)));
+    }
+  }
+
+  if (filtered.length === 0) {
+    relaxed = true;
+    filtered = foodDB.filter(f => f.is_available !== false).slice(0, 3);
+  }
+
+  const picks = filtered.slice(0, 3);
+  const constraintsText = parsed.constraints.filter(c => c !== '无特定约束').join('、') || '没有特别限制';
+
+  let text = '';
+  if (relaxed) {
+    text = `按你的要求（${constraintsText}）没有找到完全匹配的菜品，我放宽条件给你挑了几款人气选择：`;
+  } else if (picks.length === 0) {
+    text = '抱歉，当前数据库里没有符合条件的在售菜品。要不换个说法试试？比如「便宜点的」或「想吃面」~';
+  } else {
+    const reasons = [
+      `get到啦！你提到「${constraintsText}」，我帮你筛选了下面这几款：`,
+      `根据你的需求（${constraintsText}），推荐这些：` ,
+      `找到 ${picks.length} 款符合「${constraintsText}」的菜品，看看有没有想吃的：`
+    ];
+    text = reasons[Math.floor(Math.random() * reasons.length)];
+  }
+
+  return { text, dishes: picks, parsed };
+}
+
+function parseNLU(text) {
+  const constraints = [];
+  let intent = '推荐匹配';
+  let maxPrice = null;
+  let spicy = null;
+  let cuisine = null;
+  let partySize = null;
+
+  // Price detection
+  const priceMatch = text.match(/(\d+)\s*[块元]/);
+  if (priceMatch) {
+    maxPrice = parseInt(priceMatch[1]);
+    constraints.push(`不超过 ${maxPrice} 元`);
+  }
+  if (text.includes('不超过') || text.includes('便宜') || text.includes('省钱') || text.includes('少点钱')) {
+    if (!maxPrice) { maxPrice = 15; constraints.push('不超过 15 元'); }
+    intent = '筛选推荐';
+  }
+
+  // Spicy detection
+  if (text.includes('辣') && !text.includes('不辣') && !text.includes('不要辣') && !text.includes('忌辣')) {
+    spicy = '辣';
+    constraints.push('想吃辣');
+    intent = '筛选推荐';
+  }
+  if (text.includes('不辣') || text.includes('清淡') || text.includes('不要辣') || text.includes('忌辣')) {
+    spicy = '不辣';
+    constraints.push('不要辣/清淡');
+    intent = '筛选推荐';
+  }
+
+  // Cuisine detection
+  const cuisineMap = { '面':'面食','粉':'粉面','饭':'快餐','麻辣烫':'烫类','香锅':'炒菜','煲':'煲类','馄饨':'汤类','煎饼':'小吃','粥':'粥品','饺子':'饺子','汉堡':'西餐','披萨':'西餐' };
+  for (const [key, val] of Object.entries(cuisineMap)) {
+    if (text.includes(key)) { cuisine = val; constraints.push(`想吃${val}`); break; }
+  }
+
+  // Party size detection
+  const partyMatch = text.match(/(\d+)\s*人/);
+  if (partyMatch) {
+    partySize = parseInt(partyMatch[1]);
+    constraints.push(`${partySize} 人用餐`);
+    intent = '筛选推荐';
+  }
+  if (text.includes('两人') || text.includes('两个人') || text.includes('双人')) {
+    partySize = 2;
+    constraints.push('2 人用餐');
+    intent = '筛选推荐';
+  }
+
+  // Allergies / avoid
+  if (text.includes('不吃') || text.includes('忌口') || text.includes('不要')) {
+    if (text.includes('香菜')) constraints.push('不吃香菜');
+    if (text.includes('蒜')) constraints.push('不吃蒜');
+    if (text.includes('胡萝卜')) constraints.push('不吃胡萝卜');
+    if (text.includes('猪肉')) constraints.push('不吃猪肉');
+    if (text.includes('面')) { cuisine = null; constraints.push('不吃面'); }
+  }
+
+  if (constraints.length === 0) {
+    constraints.push('无特定约束');
+  }
+
+  return { intent, constraints, maxPrice, spicy, cuisine, partySize };
+}
+
+function renderAIChatMessages() {
+  const container = document.getElementById('ai-chat-messages');
+  if (!container) return;
+
+  container.innerHTML = aiChatHistory.map((msg, idx) => {
+    const isUser = msg.role === 'user';
+    const avatar = isUser ? '👤' : '🤖';
+    let dishCards = '';
+
+    if (msg.dishes && msg.dishes.length > 0) {
+      dishCards = `<div class="ai-rec-cards">${msg.dishes.map((d, i) => {
+        const card = createRecCard(d, i);
+        const wrapper = document.createElement('div');
+        wrapper.appendChild(card);
+        return wrapper.innerHTML;
+      }).join('')}</div>`;
+    }
+
+    // Show parsed constraints in a subtle tag row for AI messages
+    let metaTags = '';
+    if (!isUser && msg.parsed && msg.parsed.constraints.some(c => c !== '无特定约束')) {
+      metaTags = `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">
+        ${msg.parsed.constraints.filter(c => c !== '无特定约束').map(c => `<span style="font-size:10px;color:var(--ai-blue);background:var(--ai-blue-light);padding:2px 6px;border-radius:4px;">${c}</span>`).join('')}
+      </div>`;
+    }
+
+    return `
+      <div class="ai-chat-message ${isUser ? 'user' : 'ai'}">
+        <div class="avatar">${avatar}</div>
+        <div>
+          <div class="bubble">${escapeHtml(msg.text).replace(/\n/g, '<br>')}${dishCards}</div>
+          ${metaTags}
+          <div style="font-size:10px;color:var(--gray-400);margin-top:3px;margin-${isUser?'left':'right'}:4px;text-align:${isUser?'left':'right'};">${msg.time}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Re-attach click handlers for dynamically rendered rec cards
+  container.querySelectorAll('.rec-card-header').forEach(header => {
+    const card = header.closest('.rec-card');
+    const foodId = parseInt(card.dataset.foodId);
+    header.addEventListener('click', () => showFoodDetail(foodId));
+  });
+
+  container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function showAITyping() {
+  const container = document.getElementById('ai-chat-messages');
+  if (!container) return;
+  const typingEl = document.createElement('div');
+  typingEl.id = 'ai-typing-indicator';
+  typingEl.className = 'ai-chat-message ai';
+  typingEl.innerHTML = `
+    <div class="avatar">🤖</div>
+    <div class="bubble ai-typing"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+  `;
+  container.appendChild(typingEl);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeAITyping() {
+  const el = document.getElementById('ai-typing-indicator');
+  if (el) el.remove();
+}
+
+function clearAIChat() {
+  aiChatHistory = [];
+  const container = document.getElementById('ai-chat-messages');
+  if (container) container.innerHTML = '';
+}
+
+// ==================== Page Navigation ====================
+function switchPage(pageName) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const targetPage = document.getElementById('page-' + pageName);
+  if (targetPage) targetPage.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector(`.nav-item[data-page="${pageName}"]`).classList.add('active');
+
+  // Scroll to top when switching pages
+  document.querySelector('.content-area').scrollTop = 0;
+
+  // Initialize AI chat on first visit
+  if (pageName === 'ai' && aiChatHistory.length === 0) {
+    const displayName = currentUser?.name || currentUser?.username || '同学';
+    aiChatHistory.push({
+      role: 'ai',
+      text: `你好呀 ${displayName}！我是你的 AI 吃饭助手 🍽️\n可以直接告诉我你想吃什么，比如「想吃辣的不超过15块」或「两人吃」，我会根据食堂当前在售菜品给你推荐~`,
+      time: new Date().toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' })
+    });
+    renderAIChatMessages();
+  }
+
+  // Focus chat input when switching to AI page
+  if (pageName === 'ai') {
+    setTimeout(() => {
+      const chatInput = document.getElementById('ai-chat-input');
+      if (chatInput) chatInput.focus();
+    }, 300);
+  }
+}
+
+// ==================== Toast ====================
+function showToast(message, type='') {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = 'toast show ' + type;
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+// ==================== Start ====================
+init();
+</script>
+</body>
+</html>
